@@ -20,6 +20,23 @@ ROJO = (220, 60, 60)
 NEGRO = (20, 20, 20)
 AMARILLO = (250, 220, 70)
 
+# --- Colores de la pantalla de carga y del menu (tema oscuro) ---
+FONDO = (11, 16, 32)
+PANEL = (22, 35, 63)
+TEXTO = (232, 237, 247)
+TEXTO_SUAVE = (159, 176, 204)
+LINEA_TENUE = (40, 58, 94)
+BARRA = (86, 217, 138)
+BARRA_FONDO = (27, 39, 64)
+BARRA_BORDE = (52, 74, 112)
+BOTON = (30, 48, 82)
+BOTON_ENCIMA = (44, 74, 124)
+BOTON_APRETADO = (24, 38, 66)
+BOTON_BORDE = (86, 217, 138)
+
+# Cuanto se muestra el cartel "¡Todo listo!" antes de pasar al menu.
+ESPERA_TODO_LISTO = 0.6
+
 # --- Cancha ---
 MARGEN_X = 70          # espacio entre el borde de la ventana y la linea lateral
 MARGEN_SUPERIOR = 80   # espacio reservado arriba para el marcador

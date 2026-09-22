@@ -57,6 +57,12 @@ y no se sube). Para probarla como si fuera el sitio final:
 python -m http.server 8000 --directory build/web
 ```
 
+Y abrir **<http://127.0.0.1:8000/>**, no `http://localhost:8000/`: con el nombre
+`localhost` pygbag entra en "modo desarrollo" y busca los paquetes en un espejo
+local que no existe (da 404 y el juego no arranca). Con `127.0.0.1` —y en
+GitHub Pages— usa el CDN normal. Si se usa `python -m pygbag main.py` el propio
+pygbag arma ese espejo y `localhost` tambien funciona.
+
 ## 4. Publicar en GitHub Pages
 
 El repo ya trae el workflow [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml),
@@ -77,18 +83,48 @@ alternativa usando la rama `gh-pages`.
 
 ```
 futbol-de-mesa/
-├── main.py            # bucle principal del juego (game loop)
+├── main.py            # bucle principal + pantallas (carga > menu > partido)
 ├── settings.py        # constantes: tamanos, colores, fisica, reglas
 ├── game/
 │   ├── field.py       # la cancha: medidas, dibujo y deteccion de gol
 │   ├── ball.py        # la pelota: velocidad, friccion y rebotes
 │   ├── player.py      # las fichas de cada equipo y la formacion inicial
 │   ├── ai.py          # la IA del equipo rojo
+│   ├── ui.py          # fuentes cacheadas y botones con hover/click
+│   ├── carga.py       # pantalla de carga con progreso real por etapas
+│   ├── menu.py        # menu principal e instrucciones
+│   ├── sonidos.py     # sonidos generados por codigo (no hay archivos)
 │   └── game.py        # turnos, colisiones, marcador y dibujo del partido
-├── assets/            # imagenes y sonidos (vacio: todo se dibuja con pygame)
+├── default.tmpl       # plantilla HTML de pygbag: splash del navegador
+├── pygbag.ini         # archivos que no viajan al build web
+├── favicon.png        # icono de 64x64 generado con pygame (0,6 KB)
 ├── web/README.md      # como publicar el juego con pygbag
 └── .github/workflows/deploy.yml   # build + deploy automatico a GitHub Pages
 ```
+
+No hay carpeta `assets/`: cancha, fichas, pelota, textos y sonidos se generan
+por codigo, asi que el navegador no descarga ni una imagen ni un audio.
+
+## Las dos pantallas de carga (y por que son dos)
+
+Abrir el juego en el navegador implica descargar ~20 MB de Python + pygame
+compilados a WebAssembly. Eso pasa **antes** de que el juego pueda dibujar
+nada, asi que hay dos etapas:
+
+1. **Splash HTML** (`default.tmpl`): se ve al instante. Su barra usa el
+   progreso **real** de descarga que publica Emscripten en el elemento
+   `#progress` (0-80 %), y despues las etapas del arranque de pygbag
+   (`ready`, `install`, `start`). Cuando no hay un porcentaje fiable, la barra
+   pasa a modo indeterminado en vez de inventar numeros.
+2. **Pantalla de carga en pygame** (`game/carga.py`): ya con pygame andando.
+   Cada etapa es una funcion que hace trabajo de verdad (crear fuentes,
+   cancha, fichas, pelota, sonidos, partido) y el porcentaje es
+   `etapas_hechas / etapas_totales`. Se ejecuta **una etapa por frame**: el
+   navegador nunca se congela y no hay ningun `time.sleep()`.
+
+Limitacion conocida y a la vista: pygbag no expone un porcentaje unico para
+toda la carga (descarga del runtime + arranque + inicializacion), por eso el
+progreso se arma en tramos. Ninguno de los dos es un reloj decorativo.
 
 ## El game loop
 
@@ -130,7 +166,7 @@ Casi todo se cambia tocando un solo numero en `settings.py`:
 
 Ejercicios propuestos:
 
-1. Agregar un sonido al patear (`assets/sounds/`).
+1. Cambiar los sonidos de `game/sonidos.py` (son ondas hechas con `math`).
 2. Que el arquero no pueda salir del area.
 3. Limitar el tiempo para apuntar.
 4. Modo 2 jugadores en la misma computadora (sacar la IA).

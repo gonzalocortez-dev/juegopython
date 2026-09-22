@@ -3,10 +3,7 @@
 import pygame
 
 import settings as s
-from game import ai
-from game.ball import Ball
-from game.field import Field
-from game.player import formacion
+from game import ai, sonidos, ui
 
 # Estados posibles del partido (un string simple alcanza para entenderlo).
 APUNTANDO = "apuntando"     # turno del humano: elige ficha y direccion
@@ -17,12 +14,16 @@ FIN = "fin"                 # alguien llego a 3 goles
 
 
 class Game:
-    def __init__(self, pantalla):
+    def __init__(self, pantalla, cancha, jugadores, pelota):
+        # La cancha, las fichas y la pelota se crean durante la pantalla de
+        # carga y llegan ya listas: el partido no construye nada pesado.
         self.pantalla = pantalla
-        self.cancha = Field()
-        self.fuente_grande = pygame.font.Font(None, 64)
-        self.fuente = pygame.font.Font(None, 34)
-        self.fuente_chica = pygame.font.Font(None, 26)
+        self.cancha = cancha
+        self.jugadores = jugadores
+        self.pelota = pelota
+        self.fuente_grande = ui.fuente(64)
+        self.fuente = ui.fuente(34)
+        self.fuente_chica = ui.fuente(26)
         self.reiniciar_partido()
 
     # ------------------------------------------------------------------
@@ -35,9 +36,7 @@ class Game:
         self.estado = APUNTANDO
         self.temporizador = 0.0
         self.mensaje = ""
-        self.jugadores = formacion("azul", self.cancha) + formacion("rojo", self.cancha)
-        self.pelota = Ball(*self.cancha.rect.center)
-        self.seleccionado = None
+        self.sacar_del_medio()
 
     def sacar_del_medio(self):
         """Vuelve todo a la posicion inicial (despues de un gol)."""
@@ -91,6 +90,7 @@ class Game:
             return
         fuerza = min(direccion.length(), s.DISTANCIA_MAXIMA_TIRO) * s.FUERZA_POR_PIXEL
         self.seleccionado.lanzar(direccion.normalize(), fuerza)
+        sonidos.reproducir("golpe")
         self.seleccionado.seleccionado = False
         self.seleccionado = None
         self.estado = MOVIENDO
@@ -149,10 +149,12 @@ class Game:
         jugador, direccion, fuerza = ai.elegir_tiro(
             self.equipo("rojo"), self.pelota, self.cancha)
         jugador.lanzar(direccion, fuerza)
+        sonidos.reproducir("golpe")
         self.estado = MOVIENDO
 
     def _festejar_gol(self, equipo_que_convirtio):
         self.goles[equipo_que_convirtio] += 1
+        sonidos.reproducir("gol")
         self.mensaje = "GOL AZUL" if equipo_que_convirtio == "azul" else "GOL CPU"
         # Saca el equipo al que le convirtieron.
         self.turno = "rojo" if equipo_que_convirtio == "azul" else "azul"
@@ -236,7 +238,8 @@ class Game:
         self.pantalla.blit(texto_turno,
                            texto_turno.get_rect(center=(s.ANCHO // 2, 68)))
 
-        ayuda = "Click en una ficha azul para elegirla y otro click para disparar"
+        ayuda = ("Click en una ficha azul para elegirla y otro click para disparar"
+                 "   ·   ESC para volver al menú")
         texto_ayuda = self.fuente_chica.render(ayuda, True, s.BLANCO)
         self.pantalla.blit(texto_ayuda,
                            texto_ayuda.get_rect(center=(s.ANCHO // 2, s.ALTO - 18)))
@@ -274,6 +277,9 @@ def _chocar(a, b):
     impulso = -(1 + s.REBOTE_FICHAS) * velocidad_relativa / (1 / a.masa + 1 / b.masa)
     a.vel -= normal * (impulso / a.masa)
     b.vel += normal * (impulso / b.masa)
+
+    if -velocidad_relativa > 250:  # solo suenan los choques fuertes
+        sonidos.reproducir("rebote")
 
 
 def _dibujar_flecha(pantalla, desde, hasta, color):
