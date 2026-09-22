@@ -1,53 +1,78 @@
 # Publicar el juego en el navegador (pygbag)
 
 `pygbag` toma el proyecto Python y lo convierte en una pagina web usando
-WebAssembly. No hace falta ningun servidor ni Node.js.
+WebAssembly. No hace falta ningun servidor, backend ni Node.js: el resultado
+son archivos estaticos.
 
-## 1. Probar en local
+## Probar en local
 
 Desde la carpeta raiz del proyecto (`futbol-de-mesa/`):
 
 ```bash
-pygbag .
+python -m pygbag main.py
+# abrir http://localhost:8000
 ```
 
-Despues abrir en el navegador:
-
-```
-http://localhost:8000
-```
-
-La primera carga tarda unos segundos porque el navegador descarga Python.
-
-## 2. Generar la version publicable
+## Generar el build
 
 ```bash
-pygbag --build .
+python -m pygbag --build main.py
 ```
 
-Queda todo en la carpeta `build/web/`:
+Carpeta a publicar: **`build/web/`**
 
 ```
 build/web/
 ├── index.html
-├── futbol-de-mesa.apk   (el juego empaquetado)
+├── futbol-de-mesa.apk
+├── futbol-de-mesa.tar.gz
 └── favicon.png
 ```
 
-## 3. Subirlo a internet
+`build/web-cache/` es solo cache local de pygbag: no se publica (esta ignorada
+en `.gitignore`).
 
-Cualquier hosting de archivos estaticos sirve. Ejemplo con GitHub Pages:
+Para ver exactamente lo que va a ver el visitante:
 
-1. Subir el contenido de `build/web/` a una rama `gh-pages`.
-2. Activar Pages en Settings > Pages apuntando a esa rama.
+```bash
+python -m http.server 8000 --directory build/web
+```
 
-Tambien funciona en itch.io: comprimir `build/web/` en un `.zip` y subirlo
-como proyecto HTML5.
+## Publicacion automatica (recomendada)
 
-## Detalles importantes para que funcione en el navegador
+El workflow `.github/workflows/deploy.yml` hace el build y el deploy en cada
+push a `main`. Solo hay que activar **Settings > Pages > Source: GitHub Actions**.
 
-- `main.py` tiene que estar en la raiz y usar `asyncio.run(main())`.
-- El bucle principal tiene que hacer `await asyncio.sleep(0)` en cada frame,
-  si no el navegador se congela.
-- No se pueden usar librerias que no existan en WebAssembly (por eso solo
-  usamos `pygame-ce`).
+## Publicacion manual con la rama `gh-pages`
+
+Si se prefiere no usar Actions:
+
+```bash
+python -m pygbag --build main.py
+touch build/web/.nojekyll
+git checkout --orphan gh-pages
+git rm -rf --cached .
+cp -r build/web/* build/web/.nojekyll .
+git add index.html favicon.png *.apk *.tar.gz .nojekyll
+git commit -m "Publicar build web"
+git push origin gh-pages
+git checkout main
+```
+
+Despues: **Settings > Pages > Source: Deploy from a branch > `gh-pages` / `(root)`**.
+
+## Otras opciones
+
+itch.io: comprimir el contenido de `build/web/` en un `.zip` y subirlo como
+proyecto HTML5 (marcando "This file will be played in the browser").
+
+## Requisitos para que funcione en el navegador
+
+- `main.py` en la raiz y con `asyncio.run(main())`.
+- `await asyncio.sleep(0)` en cada vuelta del bucle (si no, el navegador se
+  congela).
+- Solo librerias disponibles en WebAssembly (por eso usamos unicamente
+  `pygame-ce`).
+- La pagina pide un click inicial ("Ready to start!") antes de arrancar: es el
+  comportamiento normal de pygbag, porque el navegador necesita interaccion del
+  usuario para habilitar el audio.

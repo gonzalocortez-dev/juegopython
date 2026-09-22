@@ -14,7 +14,7 @@ El mismo codigo corre en la computadora y en el navegador (con **pygbag**).
 - Cuando todo se detiene, juega la CPU.
 - Gana el primero que llega a **3 goles**. Al terminar, **R** reinicia el partido.
 
-## Instalacion
+## 1. Ejecutar en escritorio
 
 Requiere Python 3.13 o superior.
 
@@ -25,14 +25,53 @@ pip install -r requirements.txt
 python main.py
 ```
 
-## Jugarlo en el navegador
+## 2. Ejecutar pygbag localmente (version navegador)
 
 ```bash
-pygbag .
-# abrir http://localhost:8000
+python -m pygbag main.py
 ```
 
-Mas detalles (build y publicacion) en [`web/README.md`](web/README.md).
+Y abrir <http://localhost:8000>. La primera carga tarda unos segundos porque el
+navegador descarga Python compilado a WebAssembly.
+
+## 3. Generar el build web
+
+```bash
+python -m pygbag --build main.py
+```
+
+Los archivos publicables quedan en **`build/web/`**:
+
+```
+build/web/
+├── index.html            <- pagina de entrada
+├── futbol-de-mesa.apk    <- el juego empaquetado
+├── futbol-de-mesa.tar.gz
+└── favicon.png
+```
+
+Esa es la unica carpeta que hay que publicar (`build/web-cache/` es cache local
+y no se sube). Para probarla como si fuera el sitio final:
+
+```bash
+python -m http.server 8000 --directory build/web
+```
+
+## 4. Publicar en GitHub Pages
+
+El repo ya trae el workflow [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml),
+que genera el build y lo publica solo. Pasos:
+
+1. Subir el proyecto a GitHub con la rama principal llamada `main`.
+2. En GitHub: **Settings > Pages > Build and deployment > Source: GitHub Actions**.
+3. Hacer push a `main` (o correr el workflow a mano desde la pestana **Actions**).
+4. Cuando el workflow termina, el juego queda en:
+   `https://<usuario>.github.io/<repositorio>/`
+
+El resultado es un sitio estatico: quien lo abre **no necesita instalar Python**.
+
+Si se prefiere publicar a mano, en [`web/README.md`](web/README.md) esta la
+alternativa usando la rama `gh-pages`.
 
 ## Estructura del proyecto
 
@@ -47,7 +86,8 @@ futbol-de-mesa/
 │   ├── ai.py          # la IA del equipo rojo
 │   └── game.py        # turnos, colisiones, marcador y dibujo del partido
 ├── assets/            # imagenes y sonidos (vacio: todo se dibuja con pygame)
-└── web/README.md      # como publicar el juego con pygbag
+├── web/README.md      # como publicar el juego con pygbag
+└── .github/workflows/deploy.yml   # build + deploy automatico a GitHub Pages
 ```
 
 ## El game loop
